@@ -1,26 +1,31 @@
-const { runScan } = require('./lib/scanner-engine');
+const { runScan } = require("./lib/scanner-engine");
+const { createClient } = require("@supabase/supabase-js");
 
-exports.handler = async function handler() {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+exports.handler = async () => {
   try {
-    const result = await runScan({ force: true });
+    // 🔥 FORCE a real scan (no schedule restriction)
+    const result = await runScan();
+
+    // 🔥 Save latest state
+    await supabase.from("scanner_state").upsert({
+      id: 1,
+      data: result,
+      updated_at: new Date().toISOString()
+    });
+
     return {
       statusCode: 200,
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'no-store',
-      },
-      body: JSON.stringify(result),
+      body: JSON.stringify(result)
     };
-  } catch (error) {
+  } catch (err) {
     return {
       statusCode: 500,
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify({
-        ok: false,
-        error: error.message || 'Unknown scanner error',
-      }),
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
