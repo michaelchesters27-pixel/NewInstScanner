@@ -1,0 +1,17 @@
+{
+  "name": "eurusd-institutional-scanner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deploy-ready EUR/USD institutional scanner for Netlify + Twelve Data + Supabase",
+  "scripts": {
+    "dev": "netlify dev",
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.50.0",
+    "luxon": "^3.5.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.36.1"
+  }
+}

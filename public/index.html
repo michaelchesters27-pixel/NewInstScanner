@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EUR/USD Institutional Scanner</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121821;
+      --panel-2: #171f2a;
+      --text: #edf2f7;
+      --muted: #96a1b2;
+      --border: #243041;
+      --green: #16c784;
+      --red: #ea3943;
+      --amber: #ffb020;
+      --blue: #4da3ff;
+      --grey: #697586;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111928 0%, var(--bg) 60%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.1;
+    }
+    .sub {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 14px;
+    }
+    .top-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    button {
+      background: linear-gradient(180deg, #1a73e8, #1159bb);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(17,89,187,0.28);
+    }
+    button:disabled { opacity: 0.6; cursor: wait; }
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.22);
+    }
+    .hero {
+      padding: 24px;
+    }
+    .state-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+    .state-badge {
+      display: inline-flex;
+      padding: 10px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+      text-transform: uppercase;
+      border: 1px solid transparent;
+    }
+    .state-BUY_IDEA { background: rgba(22,199,132,0.12); color: #6ef0b8; border-color: rgba(22,199,132,0.28); }
+    .state-SELL_IDEA { background: rgba(234,57,67,0.12); color: #ff7f88; border-color: rgba(234,57,67,0.28); }
+    .state-WE_ARE_CLOSE, .state-TRADE_PASSED { background: rgba(255,176,32,0.12); color: #ffd27d; border-color: rgba(255,176,32,0.28); }
+    .state-NO_TRADE { background: rgba(105,117,134,0.18); color: #c1cada; border-color: rgba(105,117,134,0.28); }
+    .hero h2 {
+      margin: 8px 0 6px;
+      font-size: 34px;
+      line-height: 1;
+    }
+    .summary {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      max-width: 850px;
+    }
+    .bar-shell {
+      width: 100%;
+      height: 14px;
+      background: #0f141c;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 12px 0 10px;
+    }
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--grey), var(--amber), var(--green));
+      transition: width 0.4s ease;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .metric .value {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 17px;
+    }
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #0f141c;
+      font-size: 14px;
+    }
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+    .pass { background: var(--green); }
+    .fail { background: var(--red); }
+    .info-grid, .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .levels-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .panel-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .panel-stack {
+      display: grid;
+      gap: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; }
+    .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .tiny { font-size: 12px; color: var(--muted); }
+    .empty { color: var(--muted); padding: 8px 0; }
+    .footer-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 18px;
+    }
+    @media (max-width: 1024px) {
+      .grid, .panel-row { grid-template-columns: 1fr; }
+      .metrics, .info-grid, .stats-grid, .levels-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .wrap { padding: 16px; }
+      .metrics, .info-grid, .stats-grid, .levels-grid, .checklist { grid-template-columns: 1fr; }
+      h1 { font-size: 26px; }
+      .hero h2 { font-size: 28px; }
+      .top-actions { width: 100%; }
+      .top-actions > * { flex: 1 1 auto; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>EUR/USD Institutional Scanner</h1>
+        <div class="sub">Institutional scanner with progression bar, trade history, and outcome tracking.</div>
+      </div>
+      <div class="top-actions">
+        <div class="chip" id="lastScan">Last scan: --</div>
+        <div class="chip" id="nextScan">Next scan: --</div>
+        <button id="refreshBtn">Manual Refresh</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card hero">
+        <div class="state-row">
+          <div>
+            <div class="state-badge state-NO_TRADE" id="stateBadge">NO TRADE</div>
+            <h2 id="stateTitle">Waiting for first scan</h2>
+          </div>
+          <div class="tiny" id="priceBlock">EUR/USD: --</div>
+        </div>
+        <div class="summary" id="summaryText">The scanner will evaluate bias, key levels, sweep, reclaim, displacement, session, actionability, and RR before issuing an idea.</div>
+        <div class="bar-shell"><div class="bar-fill" id="progressFill"></div></div>
+        <div class="tiny"><span id="progressLabel">0%</span> of criteria fulfilled</div>
+        <div class="checklist" id="checklist"></div>
+      </section>
+
+      <aside class="card">
+        <h3 class="section-title">Trade Panel</h3>
+        <div class="metrics">
+          <div class="metric"><div class="label">Direction</div><div class="value" id="tradeDirection">--</div></div>
+          <div class="metric"><div class="label">Entry</div><div class="value mono" id="tradeEntry">--</div></div>
+          <div class="metric"><div class="label">Stop</div><div class="value mono" id="tradeStop">--</div></div>
+          <div class="metric"><div class="label">Target</div><div class="value mono" id="tradeTarget">--</div></div>
+        </div>
+        <div class="metrics" style="margin-top:12px; grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div class="metric"><div class="label">RR</div><div class="value" id="tradeRR">--</div></div>
+          <div class="metric"><div class="label">Actionable</div><div class="value" id="tradeActionable">--</div></div>
+        </div>
+        <div class="footer-note">A trade idea only appears when the full criteria chain is satisfied.</div>
+      </aside>
+    </div>
+
+    <div class="panel-row">
+      <div class="panel-stack">
+        <section class="card">
+          <h3 class="section-title">Current Read</h3>
+          <div class="info-grid">
+            <div class="metric"><div class="label">1H Bias</div><div class="value" id="biasValue">--</div></div>
+            <div class="metric"><div class="label">Session</div><div class="value" id="sessionValue">--</div></div>
+            <div class="metric"><div class="label">Liquidity</div><div class="value" id="liquidityValue">--</div></div>
+            <div class="metric"><div class="label">Displacement</div><div class="value" id="displacementValue">--</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">Key Levels</h3>
+          <div class="levels-grid">
+            <div class="metric"><div class="label">PDH</div><div class="value mono" id="pdh">--</div></div>
+            <div class="metric"><div class="label">PDL</div><div class="value mono" id="pdl">--</div></div>
+            <div class="metric"><div class="label">Current Price</div><div class="value mono" id="currentPrice">--</div></div>
+            <div class="metric"><div class="label">Asia High</div><div class="value mono" id="asiaHigh">--</div></div>
+            <div class="metric"><div class="label">Asia Low</div><div class="value mono" id="asiaLow">--</div></div>
+            <div class="metric"><div class="label">London High</div><div class="value mono" id="londonHigh">--</div></div>
+            <div class="metric"><div class="label">London Low</div><div class="value mono" id="londonLow">--</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">Reasoning</h3>
+          <div id="reasoningBox" class="summary">Waiting for scan...</div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">Past Ideas</h3>
+          <div style="overflow:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>State</th>
+                  <th>Dir</th>
+                  <th>Entry</th>
+                  <th>Stop</th>
+                  <th>Target</th>
+                  <th>RR</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td colspan="8" class="empty">No history yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="panel-stack">
+        <section class="card">
+          <h3 class="section-title">Performance</h3>
+          <div class="stats-grid">
+            <div class="metric"><div class="label">Total Ideas</div><div class="value" id="statTotal">0</div></div>
+            <div class="metric"><div class="label">Wins</div><div class="value" id="statWins">0</div></div>
+            <div class="metric"><div class="label">Losses</div><div class="value" id="statLosses">0</div></div>
+            <div class="metric"><div class="label">Win Rate</div><div class="value" id="statWinRate">0%</div></div>
+            <div class="metric"><div class="label">Active</div><div class="value" id="statActive">0</div></div>
+            <div class="metric"><div class="label">Passed</div><div class="value" id="statPassed">0</div></div>
+            <div class="metric"><div class="label">Building</div><div class="value" id="statClose">0</div></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 class="section-title">Scan Notes</h3>
+          <div class="summary">
+            <p style="margin-top:0;">The scanner only issues a Buy or Sell idea when every required criterion passes. The progression bar shows how close the market is to the full setup, but it does not override the hard gate.</p>
+            <p style="margin-bottom:0;">Past trade ideas are stored separately and later marked Won, Lost, Expired, Invalidated, or Passed.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const els = {
+      refreshBtn: document.getElementById('refreshBtn'),
+      lastScan: document.getElementById('lastScan'),
+      nextScan: document.getElementById('nextScan'),
+      stateBadge: document.getElementById('stateBadge'),
+      stateTitle: document.getElementById('stateTitle'),
+      summaryText: document.getElementById('summaryText'),
+      progressFill: document.getElementById('progressFill'),
+      progressLabel: document.getElementById('progressLabel'),
+      checklist: document.getElementById('checklist'),
+      tradeDirection: document.getElementById('tradeDirection'),
+      tradeEntry: document.getElementById('tradeEntry'),
+      tradeStop: document.getElementById('tradeStop'),
+      tradeTarget: document.getElementById('tradeTarget'),
+      tradeRR: document.getElementById('tradeRR'),
+      tradeActionable: document.getElementById('tradeActionable'),
+      biasValue: document.getElementById('biasValue'),
+      sessionValue: document.getElementById('sessionValue'),
+      liquidityValue: document.getElementById('liquidityValue'),
+      displacementValue: document.getElementById('displacementValue'),
+      pdh: document.getElementById('pdh'),
+      pdl: document.getElementById('pdl'),
+      currentPrice: document.getElementById('currentPrice'),
+      asiaHigh: document.getElementById('asiaHigh'),
+      asiaLow: document.getElementById('asiaLow'),
+      londonHigh: document.getElementById('londonHigh'),
+      londonLow: document.getElementById('londonLow'),
+      reasoningBox: document.getElementById('reasoningBox'),
+      historyBody: document.getElementById('historyBody'),
+      priceBlock: document.getElementById('priceBlock'),
+      statTotal: document.getElementById('statTotal'),
+      statWins: document.getElementById('statWins'),
+      statLosses: document.getElementById('statLosses'),
+      statWinRate: document.getElementById('statWinRate'),
+      statActive: document.getElementById('statActive'),
+      statPassed: document.getElementById('statPassed'),
+      statClose: document.getElementById('statClose'),
+    };
+
+    function fmtPrice(value) {
+      return value == null ? '--' : Number(value).toFixed(5);
+    }
+
+    function fmtTime(value) {
+      if (!value) return '--';
+      return new Date(value).toLocaleString('en-GB', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+    }
+
+    function renderChecklist(items) {
+      els.checklist.innerHTML = '';
+      for (const item of items || []) {
+        const div = document.createElement('div');
+        div.className = 'check-item';
+        div.innerHTML = `<span class="dot ${item.passed ? 'pass' : 'fail'}"></span><span>${item.label}</span>`;
+        els.checklist.appendChild(div);
+      }
+    }
+
+    function renderHistory(rows) {
+      if (!rows || !rows.length) {
+        els.historyBody.innerHTML = '<tr><td colspan="8" class="empty">No history yet.</td></tr>';
+        return;
+      }
+      els.historyBody.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${fmtTime(row.scan_time || row.created_at)}</td>
+          <td>${row.state || '--'}</td>
+          <td>${row.direction || '--'}</td>
+          <td class="mono">${fmtPrice(row.entry)}</td>
+          <td class="mono">${fmtPrice(row.stop)}</td>
+          <td class="mono">${fmtPrice(row.target)}</td>
+          <td>${row.rr == null ? '--' : row.rr}</td>
+          <td>${row.status || '--'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderStats(stats) {
+      const s = stats || {};
+      els.statTotal.textContent = s.totalIdeas ?? 0;
+      els.statWins.textContent = s.wins ?? 0;
+      els.statLosses.textContent = s.losses ?? 0;
+      els.statWinRate.textContent = `${s.winRate ?? 0}%`;
+      els.statActive.textContent = s.active ?? 0;
+      els.statPassed.textContent = s.passed ?? 0;
+      els.statClose.textContent = s.close ?? 0;
+    }
+
+    function renderScan(payload) {
+      const { state, summary, scan, history, stats } = payload;
+      const stateLabel = (state || 'NO_TRADE').replaceAll('_', ' ');
+      els.stateBadge.className = `state-badge state-${state || 'NO_TRADE'}`;
+      els.stateBadge.textContent = stateLabel;
+      els.stateTitle.textContent = stateLabel;
+      els.summaryText.textContent = summary || '--';
+      els.reasoningBox.textContent = summary || '--';
+      els.lastScan.textContent = `Last scan: ${fmtTime(scan?.scanTimeUtc)}`;
+      els.priceBlock.textContent = `EUR/USD: ${fmtPrice(scan?.latestPrice)}`;
+
+      const progress = scan?.progress?.percent ?? 0;
+      els.progressFill.style.width = `${progress}%`;
+      els.progressLabel.textContent = `${progress}%`;
+      renderChecklist(scan?.checklist || []);
+
+      els.tradeDirection.textContent = scan?.trade?.direction || '--';
+      els.tradeEntry.textContent = fmtPrice(scan?.trade?.entry);
+      els.tradeStop.textContent = fmtPrice(scan?.trade?.stop);
+      els.tradeTarget.textContent = fmtPrice(scan?.trade?.target);
+      els.tradeRR.textContent = scan?.trade?.rr == null ? '--' : scan.trade.rr;
+      els.tradeActionable.textContent = scan?.trade?.actionable ? 'YES' : 'NO';
+
+      els.biasValue.textContent = scan?.bias?.bias || '--';
+      els.sessionValue.textContent = (scan?.session || '--').replaceAll('_', ' ');
+      els.liquidityValue.textContent = scan?.sweep?.detected ? `Sweep at ${scan.sweep.level?.name || '--'}` : 'No sweep';
+      els.displacementValue.textContent = scan?.reclaim?.displacementStrength || '--';
+
+      els.pdh.textContent = fmtPrice(scan?.levels?.pdh);
+      els.pdl.textContent = fmtPrice(scan?.levels?.pdl);
+      els.currentPrice.textContent = fmtPrice(scan?.latestPrice);
+      els.asiaHigh.textContent = fmtPrice(scan?.levels?.asiaHigh);
+      els.asiaLow.textContent = fmtPrice(scan?.levels?.asiaLow);
+      els.londonHigh.textContent = fmtPrice(scan?.levels?.londonHigh);
+      els.londonLow.textContent = fmtPrice(scan?.levels?.londonLow);
+
+      renderHistory(history);
+      renderStats(stats);
+    }
+
+    async function loadScan() {
+      try {
+        els.refreshBtn.disabled = true;
+        const response = await fetch('/api/state', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Scanner request failed');
+        }
+        renderScan(data);
+      } catch (error) {
+        els.summaryText.textContent = error.message || 'Failed to load scanner';
+        els.reasoningBox.textContent = error.message || 'Failed to load scanner';
+      } finally {
+        els.refreshBtn.disabled = false;
+      }
+    }
+
+    function scheduleCountdown() {
+      function updateCountdown() {
+        const now = new Date();
+        const next = new Date(now);
+        next.setSeconds(0, 0);
+        const minutes = now.getMinutes();
+        const nextQuarter = Math.floor(minutes / 15) * 15 + 15;
+        if (nextQuarter >= 60) {
+          next.setHours(now.getHours() + 1, 0, 0, 0);
+        } else {
+          next.setMinutes(nextQuarter, 0, 0);
+        }
+        const diff = Math.max(0, next.getTime() - now.getTime());
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        els.nextScan.textContent = `Next scan: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      }
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+    }
+
+    function scheduleAlignedRefresh() {
+      setInterval(async () => {
+        await loadScan();
+        updateCountdown();
+      }, 60000);
+    }
+
+    scheduleAlignedRefresh();
+    loadScan();
+  </script>
+</body>
+</html>
